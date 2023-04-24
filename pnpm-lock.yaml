@@ -12,11 +12,11 @@ importers:
       '@manypkg/cli': ^0.19.2
       '@typescript-eslint/eslint-plugin': ^5.57.1
       '@typescript-eslint/parser': ^5.57.1
-      eslint: ^8.37.0
+      eslint: ^8.28.0
       prettier: ^2.8.7
       prettier-plugin-tailwindcss: ^0.1.13
       turbo: ^1.8.8
-      typescript: ^4.9.5
+      typescript: ^4.9.3
     dependencies:
       '@manypkg/cli': 0.19.2
       '@typescript-eslint/eslint-plugin': 5.57.1_iify4w3mi7rbbu6mxzspkpx4b4
@@ -3783,7 +3783,7 @@ packages:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
     dependencies:
-      '@tanstack/react-query': 4.19.1_biqbaboplfbrettd7655fr4n2y
+      '@tanstack/react-query': 4.19.1_2so4eo66zr774rftk5qlya5ltu
       '@trpc/client': 10.5.0_@trpc+server@10.5.0
       '@trpc/server': 10.5.0
       react: 18.2.0
@@ -4168,7 +4168,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dependencies:
       '@typescript-eslint/types': 5.50.0
-      eslint-visitor-keys: 3.3.0
+      eslint-visitor-keys: 3.4.0
     dev: true
 
   /@typescript-eslint/visitor-keys/5.57.1:
@@ -5948,7 +5948,6 @@ packages:
   /eslint-visitor-keys/3.4.0:
     resolution: {integrity: sha512-HPpKPUBQcAsZOsHAFwTtIKcYlCje62XB7SEAcxjtmW6TD1WVpkS6i6/hOVtTZIl4zGj/mBqpFVGvaDneik+VoQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
-    dev: false
 
   /eslint/8.29.0:
     resolution: {integrity: sha512-isQ4EEiyUjZFbEKvEGJKKGBwXtvXX+zJbkVKCgTuB9t/+jUBcy8avhkEwWJecI15BkRkOYmvIM5ynbhRjEkoeg==}

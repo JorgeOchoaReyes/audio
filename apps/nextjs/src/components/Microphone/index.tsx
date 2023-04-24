@@ -25,7 +25,7 @@ const Microphone = ({ setText }: IProps) => {
   }, [transcript]);
 
   if (!browserSupportsSpeechRecognition) {
-    return <Text>Browser doesn't support speech recognition.</Text>;
+    return <Text>Browser does not support speech recognition.</Text>;
   }
 
   return (

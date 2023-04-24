@@ -16,7 +16,7 @@ export async function getToken(key: string) {
 export const tokenCache =
   Platform.OS !== "web"
     ? {
-        getToken,
-        saveToken,
-      }
+      getToken,
+      saveToken,
+    }
     : undefined;
