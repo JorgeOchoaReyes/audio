@@ -22,7 +22,7 @@ const Microphone = ({ setText }: IProps) => {
 
   useEffect(() => {
     if (transcript) setText(transcript);
-  }, [transcript]);
+  }, [setText, transcript]);
 
   if (!browserSupportsSpeechRecognition) {
     return <Text>Browser does not support speech recognition.</Text>;
@@ -57,7 +57,10 @@ const Microphone = ({ setText }: IProps) => {
         <Button
           color={"warning"}
           className="mr-2"
-          onClick={() => resetTranscript()}
+          onClick={() => {
+            resetTranscript();
+            setText("");
+          }}
         >
           Reset
         </Button>
