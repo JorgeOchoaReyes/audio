@@ -44,7 +44,9 @@ const Home: NextPage = () => {
     }
 
     setError("");
-    setDocument([...document, text]);
+    const newDocument = [...document];
+    newDocument[chosenParagraph] = text;
+    setDocument([...newDocument]);
     setText("");
     setChosenParagraph(document.length);
   };
