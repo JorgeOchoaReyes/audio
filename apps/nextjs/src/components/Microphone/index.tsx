@@ -43,7 +43,7 @@ const Microphone = ({ setText }: IProps) => {
         <Button
           className="mr-2"
           color={"success"}
-          onClick={() => SpeechRecognition.startListening()}
+          onClick={() => SpeechRecognition.startListening({ continuous: true })}
         >
           Start
         </Button>
