@@ -13,8 +13,14 @@
     "@acme/db": "*",
     "@trpc/client": "^10.1.0",
     "@trpc/server": "^10.1.0",
+    "docxtemplater": "^3.37.2",
+    "fs": "0.0.1-security",
     "openai": "^3.2.1",
+    "os": "^0.1.2",
+    "path": "^0.12.7",
+    "pizzip": "^3.1.4",
     "superjson": "^1.9.1",
+    "temp": "^0.9.4",
     "zod": "^3.18.0"
   },
   "devDependencies": {

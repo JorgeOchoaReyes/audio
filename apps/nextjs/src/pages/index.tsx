@@ -1,8 +1,14 @@
+import type {
+  AnchorHTMLAttributes,
+  DetailedHTMLProps,
+  LegacyRef,
+  MutableRefObject,
+} from "react";
 import React from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { trpc } from "../utils/trpc";
-import { Textarea, Button, Text, Loading, Card } from "@nextui-org/react";
+import { Textarea, Button, Text, Loading, Input } from "@nextui-org/react";
 import { Box } from "../components/Box";
 import Microphone from "../components/Microphone";
 import { useHasHydrated } from "../hooks/hasHydrated";
@@ -13,8 +19,10 @@ const Home: NextPage = () => {
   const [chosenParagraph, setChosenParagraph] = React.useState(0);
   const [text, setText] = React.useState("");
   const [error, setError] = React.useState("");
+  const [title, setTitle] = React.useState("");
 
   const summaryQuery = trpc.speak.makeQuery.useMutation();
+  const createDocument = trpc.speak.createWordDocument.useMutation();
 
   const generateQuery = async (query: string) => {
     if (text === "" || !text) {
@@ -45,10 +53,51 @@ const Home: NextPage = () => {
 
     setError("");
     const newDocument = [...document];
-    newDocument[chosenParagraph] = text;
+
+    if (chosenParagraph !== -1) {
+      newDocument[chosenParagraph] = text;
+      setDocument([...newDocument]);
+      setText("");
+      setChosenParagraph(-1);
+      return;
+    }
+    newDocument.push(text);
     setDocument([...newDocument]);
     setText("");
-    setChosenParagraph(document.length);
+  };
+
+  const linkRef = React.useRef<any>();
+
+  const downloadWordDoc = async () => {
+    if (document.length === 0) {
+      setError("Please enter some text.");
+      return;
+    }
+    const results = await createDocument.mutateAsync({
+      document: document,
+    });
+    if (results?.error) {
+      setError(results?.message);
+    } else if (results?.data && results?.success) {
+      setError("");
+      const byteCharacters = atob(results?.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const dataBlob = new Blob([byteArray], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const href = window.URL.createObjectURL(dataBlob);
+      const a = linkRef.current;
+      a.download = `${title}.docx`;
+      a.href = href;
+      a.click();
+      a.href = "";
+    } else {
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -59,13 +108,20 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex h-screen w-screen flex-col items-center text-white">
+        <a ref={linkRef} />
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-8">
           <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
             <span className="text-[hsl(280,100%,70%)]">Speak</span>
           </h1>
           <div className="mt-5 flex h-[100%] w-screen flex-row justify-center overflow-auto overflow-y-auto px-4 text-2xl">
             <div className="m-[2%] flex w-[40%] flex-col justify-start overflow-auto">
-              <div className="mb-5 h-[600px] w-full overflow-auto rounded-lg bg-[#16181a]">
+              <Input
+                placeholder="Title"
+                className="mb-5"
+                onChange={(e) => setTitle(e.target.value)}
+                value={title}
+              />
+              <div className="mb-5 h-[500px] w-full overflow-auto rounded-lg bg-[#16181a]">
                 {document.map((item, index) => (
                   <div
                     key={index}
@@ -96,6 +152,18 @@ const Home: NextPage = () => {
                   </div>
                 ))}
               </div>
+              <Button
+                onClick={downloadWordDoc}
+                shadow
+                color="success"
+                size="md"
+              >
+                {createDocument.isLoading ? (
+                  <Loading color="currentColor" size="sm" />
+                ) : (
+                  "Download Word Doc"
+                )}
+              </Button>
             </div>
             <div className=" flex w-[50%] flex-col justify-start overflow-y-auto px-4 text-2xl">
               {hasHydrated && <Microphone setText={setText} />}
