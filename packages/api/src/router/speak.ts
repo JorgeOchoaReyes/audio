@@ -2,6 +2,10 @@ import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { z } from "zod";
 import { Configuration, OpenAIApi } from "openai";
 import type { IResult } from "../../types";
+import PizZip from "pizzip";
+import Docxtemplater from "docxtemplater";
+import { promises as fs } from "fs";
+import path from "path";
 
 export const speakRouter = router({
   makeQuery: publicProcedure
@@ -49,5 +53,41 @@ export const speakRouter = router({
         };
         return results;
       }
+    }),
+  createWordDocument: publicProcedure
+    .input(z.object({ document: z.array(z.string()) }))
+    .mutation(async ({ input }) => {
+      const dir = path.join(process.cwd(), "templates");
+      //Read the json data file data.json
+      const content = await fs.readFile(dir + "/default.docx", "binary");
+      const zip = new PizZip(content);
+
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+      doc.setData({ paragraphs: input.document.map((p) => ({ text: p })) });
+      doc.render();
+
+      const buf: any = doc.getZip().generate({
+        type: "nodebuffer",
+        compression: "DEFLATE",
+      });
+
+      const file = {
+        content: Buffer.from(buf, "utf-8").toString("base64"),
+        filename: "cateringlabels.docx",
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        disposition: "attachment",
+      };
+
+      const results: IResult<string> = {
+        error: false,
+        message: "Success",
+        success: true,
+        data: file.content,
+      };
+
+      return results;
     }),
 });
