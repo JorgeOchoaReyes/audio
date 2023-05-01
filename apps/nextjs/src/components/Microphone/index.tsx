@@ -39,16 +39,16 @@ const Microphone = ({ setText }: IProps) => {
           )}
         </Text>
       )}
-      <Box className="flex flex-row ">
+      <Box className="flex flex-row flex-wrap justify-center ">
         <Button
-          className="mr-2"
+          className="m-1"
           color={"success"}
           onClick={() => SpeechRecognition.startListening({ continuous: true })}
         >
           Start
         </Button>
         <Button
-          className="mr-2"
+          className="m-1"
           color={"error"}
           onClick={() => SpeechRecognition.stopListening()}
         >
@@ -56,7 +56,7 @@ const Microphone = ({ setText }: IProps) => {
         </Button>
         <Button
           color={"warning"}
-          className="mr-2"
+          className="m-1"
           onClick={() => {
             resetTranscript();
             setText("");

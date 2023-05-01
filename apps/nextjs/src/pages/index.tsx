@@ -176,8 +176,9 @@ const Home: NextPage = () => {
                 className="mb-10"
               />
               {error !== "" && <Text color="error"> {error} </Text>}
-              <Box className="flex flex-row justify-around">
+              <Box className="flex flex-row flex-wrap justify-around">
                 <Button
+                  css={{ margin: ".5rem" }}
                   onClick={async () => await generateQuery("concise")}
                   shadow
                   color="gradient"
@@ -191,6 +192,7 @@ const Home: NextPage = () => {
                 </Button>
                 <Button
                   onClick={async () => await generateQuery("sophisticated")}
+                  css={{ margin: ".5rem" }}
                   shadow
                   color="gradient"
                   size="md"
@@ -205,6 +207,7 @@ const Home: NextPage = () => {
                   onClick={async () =>
                     await generateQuery("grammatically correct")
                   }
+                  css={{ margin: ".5rem" }}
                   shadow
                   color="gradient"
                   size="md"
@@ -217,6 +220,7 @@ const Home: NextPage = () => {
                 </Button>
                 <Button
                   onClick={saveParagraph}
+                  css={{ margin: ".5rem" }}
                   shadow
                   color="gradient"
                   size="md"
