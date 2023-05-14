@@ -6,6 +6,7 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { promises as fs } from "fs";
 import path from "path";
+import type { Spook, paragraph } from "@acme/db";
 
 export const speakRouter = router({
   makeQuery: publicProcedure
@@ -36,7 +37,7 @@ export const speakRouter = router({
           };
           return results;
         }
-        console.log(completion.data.choices);
+        // console.log(completion.data.choices);
         const results: IResult<string> = {
           error: false,
           message: "Success",
@@ -188,4 +189,42 @@ export const speakRouter = router({
         return results;
       }
     }),
+  getSpooks: protectedProcedure.query(async ({ ctx }) => {
+    const { prisma } = ctx;
+    const userId = ctx.auth.userId;
+    if (!userId) {
+      const results: IResult<undefined> = {
+        error: true,
+        message: "Not logged in",
+        success: false,
+        data: undefined,
+      };
+      return results;
+    }
+    try {
+      const spooks = await prisma.spook.findMany({
+        where: { userId: userId },
+        include: { document: true },
+      });
+      const results: IResult<
+        (Spook & {
+          document: paragraph[];
+        })[]
+      > = {
+        error: false,
+        message: "Success",
+        success: true,
+        data: spooks,
+      };
+      return results;
+    } catch (error) {
+      const results: IResult<undefined> = {
+        error: true,
+        message: (error as { message: string }).message,
+        success: false,
+        data: undefined,
+      };
+      return results;
+    }
+  }),
 });

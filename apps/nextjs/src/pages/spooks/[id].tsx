@@ -2,21 +2,40 @@ import React from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { trpc } from "../../utils/trpc";
-import { Textarea, Button, Text, Loading, Input } from "@nextui-org/react";
+import {
+  Textarea,
+  Button,
+  Text,
+  Loading,
+  Input,
+  Tooltip,
+  Modal,
+} from "@nextui-org/react";
 import { Box } from "../../components/Box";
 import Microphone from "../../components/Microphone";
 import { useHasHydrated } from "../../hooks/hasHydrated";
+import { useAuth } from "@clerk/nextjs";
 
 const Home: NextPage = () => {
   const hasHydrated = useHasHydrated();
+  const auth = useAuth();
   const [document, setDocument] = React.useState<string[]>([]);
   const [chosenParagraph, setChosenParagraph] = React.useState(0);
   const [text, setText] = React.useState("");
   const [error, setError] = React.useState("");
   const [title, setTitle] = React.useState("");
 
+  const [visible, setVisible] = React.useState(false);
+  const handler = () => setVisible(true);
+
+  const closeHandler = () => {
+    setVisible(false);
+    setError("");
+  };
+
   const summaryQuery = trpc.speak.makeQuery.useMutation();
   const createDocument = trpc.speak.createWordDocument.useMutation();
+  const saveSpook = trpc.speak.saveSpook.useMutation();
 
   const generateQuery = async (query: string) => {
     if (text === "" || !text) {
@@ -58,6 +77,23 @@ const Home: NextPage = () => {
     newDocument.push(text);
     setDocument([...newDocument]);
     setText("");
+  };
+
+  const upsertSpook = async () => {
+    const upsertResult = await saveSpook.mutateAsync({
+      title: title,
+      document: document,
+      spookId: "",
+    });
+
+    if (upsertResult?.error) {
+      setError(upsertResult?.message);
+      setVisible(true);
+    }
+    if (upsertResult?.data && upsertResult?.success) {
+      setError("");
+      setVisible(true);
+    }
   };
 
   const linkRef = React.useRef<any>();
@@ -110,7 +146,7 @@ const Home: NextPage = () => {
           <div className="mt-5 flex h-[100%] w-screen flex-row justify-center overflow-auto overflow-y-auto px-4 text-2xl">
             <div className="m-[2%] flex w-[40%] flex-col justify-start overflow-auto">
               <Input
-                placeholder="Title"
+                placeholder="Title*"
                 className="mb-5"
                 onChange={(e) => setTitle(e.target.value)}
                 value={title}
@@ -146,18 +182,43 @@ const Home: NextPage = () => {
                   </div>
                 ))}
               </div>
-              <Button
-                onClick={downloadWordDoc}
-                shadow
-                color="success"
-                size="md"
-              >
-                {createDocument.isLoading ? (
-                  <Loading color="currentColor" size="sm" />
-                ) : (
-                  "Download as Word Doc"
+              <div className="flex flex-row items-center justify-around">
+                <Button
+                  onClick={downloadWordDoc}
+                  shadow
+                  className="bg-[#4F70BE]"
+                  size="md"
+                >
+                  {createDocument.isLoading ? (
+                    <Loading color="currentColor" size="sm" />
+                  ) : (
+                    "Download as Word Doc"
+                  )}
+                </Button>
+                {auth.isSignedIn && (
+                  <Tooltip
+                    className="w-[100%]"
+                    trigger="click"
+                    placement="bottom"
+                    color="primary"
+                    isDisabled={title !== "" && document.length !== 0}
+                    content={"Please add a title and some text to save."}
+                  >
+                    <Button
+                      onClick={upsertSpook}
+                      shadow
+                      color="success"
+                      disabled={title === "" || document.length === 0}
+                    >
+                      {saveSpook.isLoading ? (
+                        <Loading color="currentColor" size="sm" />
+                      ) : (
+                        "Save changes"
+                      )}
+                    </Button>
+                  </Tooltip>
                 )}
-              </Button>
+              </div>
             </div>
             <div className=" flex w-[50%] flex-col justify-start overflow-y-auto px-4 text-2xl">
               {hasHydrated && <Microphone setText={setText} />}
@@ -229,6 +290,26 @@ const Home: NextPage = () => {
             </div>
           </div>
         </div>
+        <Modal
+          closeButton
+          aria-labelledby="modal-title"
+          open={visible}
+          onClose={closeHandler}
+        >
+          <Modal.Header>
+            <Text id="modal-title" size={18}>
+              {error !== "" ? "An error occured" : "Success!"}
+            </Text>
+          </Modal.Header>
+          <Modal.Body>
+            {error !== "" ? <Text>{error}</Text> : <Text>Document saved!</Text>}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button auto flat color="error" onPress={closeHandler}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </main>
     </>
   );
