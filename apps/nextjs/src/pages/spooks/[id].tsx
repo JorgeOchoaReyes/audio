@@ -2,21 +2,66 @@ import React from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { trpc } from "../../utils/trpc";
-import { Textarea, Button, Text, Loading, Input } from "@nextui-org/react";
+import {
+  Textarea,
+  Button,
+  Text,
+  Loading,
+  Input,
+  Tooltip,
+  Modal,
+} from "@nextui-org/react";
 import { Box } from "../../components/Box";
 import Microphone from "../../components/Microphone";
 import { useHasHydrated } from "../../hooks/hasHydrated";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/router";
+import LoadingProgress from "../../components/Loading";
 
 const Home: NextPage = () => {
+  const router = useRouter();
   const hasHydrated = useHasHydrated();
+  const auth = useAuth();
   const [document, setDocument] = React.useState<string[]>([]);
-  const [chosenParagraph, setChosenParagraph] = React.useState(0);
+  const [chosenParagraph, setChosenParagraph] = React.useState(-1);
   const [text, setText] = React.useState("");
   const [error, setError] = React.useState("");
   const [title, setTitle] = React.useState("");
 
+  const [visible, setVisible] = React.useState(false);
+  const handler = () => setVisible(true);
+
+  const closeHandler = () => {
+    setVisible(false);
+    setError("");
+  };
+
+  const spook = trpc.speak.findSpook.useQuery(
+    {
+      spookId: router.query.id as string,
+    },
+    {
+      refetchOnWindowFocus: false,
+      onSettled(data, error) {
+        if (error) {
+          router.push("/");
+        }
+      },
+      onSuccess: (data) => {
+        if (data.data) {
+          const newParagraphs: string[] = new Array(data.data.document.length);
+          data.data.document.forEach((paragraph) => {
+            newParagraphs[paragraph.index] = paragraph.text;
+          });
+          setDocument(newParagraphs);
+          setTitle(data.data.title);
+        }
+      },
+    },
+  );
   const summaryQuery = trpc.speak.makeQuery.useMutation();
   const createDocument = trpc.speak.createWordDocument.useMutation();
+  const saveSpook = trpc.speak.saveSpook.useMutation();
 
   const generateQuery = async (query: string) => {
     if (text === "" || !text) {
@@ -58,6 +103,23 @@ const Home: NextPage = () => {
     newDocument.push(text);
     setDocument([...newDocument]);
     setText("");
+  };
+
+  const upsertSpook = async () => {
+    const upsertResult = await saveSpook.mutateAsync({
+      title: title,
+      document: document,
+      spookId: router.query.id as string,
+    });
+
+    if (upsertResult?.error) {
+      setError(upsertResult?.message);
+      setVisible(true);
+    }
+    if (upsertResult?.data && upsertResult?.success) {
+      setError("");
+      setVisible(true);
+    }
   };
 
   const linkRef = React.useRef<any>();
@@ -103,132 +165,185 @@ const Home: NextPage = () => {
       </Head>
       <main className="flex h-screen w-screen flex-col items-center text-white">
         <a ref={linkRef} />
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-8">
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-            <span className="text-[hsl(280,100%,70%)]">Speak</span>
-          </h1>
-          <div className="mt-5 flex h-[100%] w-screen flex-row justify-center overflow-auto overflow-y-auto px-4 text-2xl">
-            <div className="m-[2%] flex w-[40%] flex-col justify-start overflow-auto">
-              <Input
-                placeholder="Title"
-                className="mb-5"
-                onChange={(e) => setTitle(e.target.value)}
-                value={title}
-              />
-              <div className="mb-5 h-[500px] w-full overflow-auto rounded-lg bg-[#16181a]">
-                {document.map((item, index) => (
-                  <div
-                    key={index}
-                    className="m-4 flex w-[90%] flex-col rounded-md bg-[#042f14] p-4"
+        {spook.isLoading ||
+        !spook.data?.success ||
+        !spook.data.data ||
+        (spook.data.data.document.length !== 0 && document.length === 0) ? (
+          <LoadingProgress />
+        ) : (
+          <div className="container flex flex-col items-center justify-center gap-12 px-4 py-8">
+            <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
+              <span className="text-[hsl(280,100%,70%)]">Speak</span>
+            </h1>
+            <div className="mt-5 flex h-[100%] w-screen flex-row justify-center overflow-auto overflow-y-auto px-4 text-2xl">
+              <div className="m-[2%] flex w-[40%] flex-col justify-start overflow-auto">
+                <Input
+                  placeholder="Title*"
+                  className="mb-5"
+                  onChange={(e) => setTitle(e.target.value)}
+                  value={title}
+                />
+                <div className="mb-5 h-[500px] w-full overflow-auto rounded-lg bg-[#16181a]">
+                  {document.map((item, index) => (
+                    <div
+                      key={index}
+                      className="m-4 flex w-[90%] flex-col rounded-md bg-[#042f14] p-4"
+                    >
+                      <div
+                        className={
+                          "cursor-pointer text-sm font-bold text-[#3ad67d]"
+                        }
+                        onClick={() => {
+                          setChosenParagraph(index);
+                          setText(item);
+                        }}
+                      >
+                        {" "}
+                        Paragraph {index + 1}{" "}
+                      </div>
+                      <div
+                        className={"cursor-pointer text-xl text-[#3ad67d]"}
+                        onClick={() => {
+                          setChosenParagraph(index);
+                          setText(item);
+                        }}
+                      >
+                        {" "}
+                        {item}{" "}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-row items-center justify-around">
+                  <Button
+                    onClick={downloadWordDoc}
+                    shadow
+                    className="bg-[#4F70BE]"
+                    size="md"
                   >
-                    <div
-                      className={
-                        "cursor-pointer text-sm font-bold text-[#3ad67d]"
-                      }
-                      onClick={() => {
-                        setChosenParagraph(index);
-                        setText(item);
-                      }}
+                    {createDocument.isLoading ? (
+                      <Loading color="currentColor" size="sm" />
+                    ) : (
+                      "Download as Word Doc"
+                    )}
+                  </Button>
+                  {auth.isSignedIn && (
+                    <Tooltip
+                      className="w-[100%]"
+                      trigger="click"
+                      placement="bottom"
+                      color="primary"
+                      isDisabled={title !== "" && document.length !== 0}
+                      content={"Please add a title and some text to save."}
                     >
-                      {" "}
-                      Paragraph {index + 1}{" "}
-                    </div>
-                    <div
-                      className={"cursor-pointer text-xl text-[#3ad67d]"}
-                      onClick={() => {
-                        setChosenParagraph(index);
-                        setText(item);
-                      }}
-                    >
-                      {" "}
-                      {item}{" "}
-                    </div>
-                  </div>
-                ))}
+                      <Button
+                        onClick={upsertSpook}
+                        shadow
+                        color="success"
+                        disabled={title === "" || document.length === 0}
+                      >
+                        {saveSpook.isLoading ? (
+                          <Loading color="currentColor" size="sm" />
+                        ) : (
+                          "Save changes"
+                        )}
+                      </Button>
+                    </Tooltip>
+                  )}
+                </div>
               </div>
-              <Button
-                onClick={downloadWordDoc}
-                shadow
-                color="success"
-                size="md"
-              >
-                {createDocument.isLoading ? (
-                  <Loading color="currentColor" size="sm" />
-                ) : (
-                  "Download as Word Doc"
-                )}
-              </Button>
-            </div>
-            <div className=" flex w-[50%] flex-col justify-start overflow-y-auto px-4 text-2xl">
-              {hasHydrated && <Microphone setText={setText} />}
-              <Textarea
-                label="Speak/Write your thoughts"
-                placeholder="Enter your amazing ideas."
-                value={text}
-                disabled={summaryQuery.isLoading}
-                onChange={(e) => setText(e.target.value)}
-                className="mb-10"
-              />
-              {error !== "" && <Text color="error"> {error} </Text>}
-              <Box className="flex flex-row flex-wrap justify-around">
-                <Button
-                  css={{ margin: ".5rem" }}
-                  onClick={async () => await generateQuery("concise")}
-                  shadow
-                  color="gradient"
-                  size="md"
-                >
-                  {summaryQuery.isLoading ? (
-                    <Loading color="currentColor" size="sm" />
-                  ) : (
-                    "Make Consise"
-                  )}
-                </Button>
-                <Button
-                  onClick={async () => await generateQuery("sophisticated")}
-                  css={{ margin: ".5rem" }}
-                  shadow
-                  color="gradient"
-                  size="md"
-                >
-                  {summaryQuery.isLoading ? (
-                    <Loading color="currentColor" size="sm" />
-                  ) : (
-                    "Make Sophisticated"
-                  )}
-                </Button>
-                <Button
-                  onClick={async () =>
-                    await generateQuery("grammatically correct")
-                  }
-                  css={{ margin: ".5rem" }}
-                  shadow
-                  color="gradient"
-                  size="md"
-                >
-                  {summaryQuery.isLoading ? (
-                    <Loading color="currentColor" size="sm" />
-                  ) : (
-                    "Spell Check"
-                  )}
-                </Button>
-                <Button
-                  onClick={saveParagraph}
-                  css={{ margin: ".5rem" }}
-                  shadow
-                  color="gradient"
-                  size="md"
-                >
-                  {summaryQuery.isLoading ? (
-                    <Loading color="currentColor" size="sm" />
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
-              </Box>
+              <div className=" flex w-[50%] flex-col justify-start overflow-y-auto px-4 text-2xl">
+                {hasHydrated && <Microphone setText={setText} />}
+                <Textarea
+                  label="Speak/Write your thoughts"
+                  placeholder="Enter your amazing ideas."
+                  value={text}
+                  disabled={summaryQuery.isLoading}
+                  onChange={(e) => setText(e.target.value)}
+                  className="mb-10"
+                />
+                {error !== "" && <Text color="error"> {error} </Text>}
+                <Box className="flex flex-row flex-wrap justify-around">
+                  <Button
+                    css={{ margin: ".5rem" }}
+                    onClick={async () => await generateQuery("concise")}
+                    shadow
+                    color="gradient"
+                    size="md"
+                  >
+                    {summaryQuery.isLoading ? (
+                      <Loading color="currentColor" size="sm" />
+                    ) : (
+                      "Make Consise"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={async () => await generateQuery("sophisticated")}
+                    css={{ margin: ".5rem" }}
+                    shadow
+                    color="gradient"
+                    size="md"
+                  >
+                    {summaryQuery.isLoading ? (
+                      <Loading color="currentColor" size="sm" />
+                    ) : (
+                      "Make Sophisticated"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={async () =>
+                      await generateQuery("grammatically correct")
+                    }
+                    css={{ margin: ".5rem" }}
+                    shadow
+                    color="gradient"
+                    size="md"
+                  >
+                    {summaryQuery.isLoading ? (
+                      <Loading color="currentColor" size="sm" />
+                    ) : (
+                      "Spell Check"
+                    )}
+                  </Button>
+                  <Button
+                    onClick={saveParagraph}
+                    css={{ margin: ".5rem" }}
+                    shadow
+                    color="gradient"
+                    size="md"
+                  >
+                    {summaryQuery.isLoading ? (
+                      <Loading color="currentColor" size="sm" />
+                    ) : (
+                      "Save"
+                    )}
+                  </Button>
+                </Box>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        <Modal
+          closeButton
+          aria-labelledby="modal-title"
+          open={visible}
+          onClose={closeHandler}
+        >
+          <Modal.Header>
+            <Text id="modal-title" size={18}>
+              {error !== "" ? "An error occured" : "Success!"}
+            </Text>
+          </Modal.Header>
+          <Modal.Body>
+            {error !== "" ? <Text>{error}</Text> : <Text>Document saved!</Text>}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button auto flat color="error" onPress={closeHandler}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </main>
     </>
   );
