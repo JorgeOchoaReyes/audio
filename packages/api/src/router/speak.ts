@@ -90,4 +90,102 @@ export const speakRouter = router({
 
       return results;
     }),
+  saveSpook: protectedProcedure
+    .input(
+      z.object({
+        document: z.array(z.string()),
+        title: z.string(),
+        spookId: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { title } = input;
+      let { document, spookId } = input;
+      const { prisma } = ctx;
+      const userId = ctx.auth.userId;
+      if (!userId) {
+        const results: IResult<undefined> = {
+          error: true,
+          message: "Not logged in",
+          success: false,
+          data: undefined,
+        };
+        return results;
+      }
+      try {
+        if (!spookId) spookId = Math.random().toString(36).substring(7);
+
+        const formattedDoc: {
+          text: string;
+          index: number;
+          spookId: string;
+        }[] = document.map((p, i) => {
+          return {
+            text: p,
+            index: i,
+            spookId: spookId,
+          };
+        });
+
+        await prisma.paragraph.createMany({
+          data: formattedDoc,
+        });
+
+        const paragraphs = await prisma.paragraph.findMany({
+          where: { spookId: spookId },
+        });
+
+        const spook = await prisma.spook.upsert({
+          where: { id: spookId },
+          update: { title: title },
+          create: {
+            id: spookId,
+            title: title,
+            userId: userId,
+          },
+        });
+
+        await prisma.user.upsert({
+          where: { id: userId },
+          update: {
+            spook: {
+              connect: { id: spookId },
+            },
+          },
+          create: {
+            id: userId,
+            email: ctx.auth.user?.emailAddresses[0]?.emailAddress ?? "",
+            name: ctx.auth.user?.username ?? "",
+          },
+        });
+
+        await prisma.spook.update({
+          where: { id: spookId },
+          data: {
+            document: {
+              connect: paragraphs.map((p) => ({ id: p.id })),
+            },
+            user: {
+              connect: { id: userId },
+            },
+          },
+        });
+
+        const results: IResult<string> = {
+          error: false,
+          message: "Success",
+          success: true,
+          data: spook.id,
+        };
+        return results;
+      } catch (error) {
+        const results: IResult<undefined> = {
+          error: true,
+          message: (error as { message: string }).message,
+          success: false,
+          data: undefined,
+        };
+        return results;
+      }
+    }),
 });
