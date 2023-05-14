@@ -15,7 +15,7 @@ module.exports = {
   rules: {
     "@typescript-eslint/consistent-type-imports": "warn",
     "no-console": "off",
-    indent: ["error", 2],
+    indent: ["error", 2, { SwitchCase: 1 }],
     quotes: [2, "double"],
     semi: [2, "always"],
   },

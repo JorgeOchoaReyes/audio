@@ -5,9 +5,12 @@ import { trpc } from "../utils/trpc";
 import { Button, Text, Modal, Table } from "@nextui-org/react";
 import LoadingProgress from "../components/Loading";
 import Error from "../components/Error";
+import type { NextRouter } from "next/router";
+import { useRouter } from "next/router";
 import type { getSpookTypeResult } from "../types";
 
 const Home: NextPage = () => {
+  const router = useRouter();
   const [error, setError] = React.useState("");
   const spooks = trpc.speak.getSpooks.useQuery();
 
@@ -32,7 +35,7 @@ const Home: NextPage = () => {
         ) : spooks.error ? (
           <Error error={spooks.error.message} />
         ) : spooks.data && spooks.data.data ? (
-          <SpookTable spooks={spooks.data.data} />
+          <SpookTable spooks={spooks.data.data} router={router} />
         ) : (
           <Text>Nothing to see here</Text>
         )}
@@ -61,7 +64,10 @@ const Home: NextPage = () => {
   );
 };
 
-const SpookTable: React.FC<{ spooks: getSpookTypeResult }> = ({ spooks }) => {
+const SpookTable: React.FC<{
+  spooks: getSpookTypeResult;
+  router: NextRouter;
+}> = ({ spooks, router }) => {
   if (!spooks) return <Error error="No spooks found" />;
   return (
     <>
@@ -69,6 +75,11 @@ const SpookTable: React.FC<{ spooks: getSpookTypeResult }> = ({ spooks }) => {
       <Table
         aria-label="Example table with static content"
         selectionMode="single"
+        onSelectionChange={(row: any) => {
+          if (row?.currentKey) {
+            router.push(`/spooks/${row?.currentKey}`);
+          }
+        }}
         css={{
           height: "auto",
           minWidth: "90vw",

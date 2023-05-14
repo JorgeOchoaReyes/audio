@@ -227,4 +227,46 @@ export const speakRouter = router({
       return results;
     }
   }),
+  findSpook: protectedProcedure
+    .input(z.object({ spookId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const { spookId } = input;
+      const { prisma } = ctx;
+      const userId = ctx.auth.userId;
+      if (!userId) {
+        const results: IResult<undefined> = {
+          error: true,
+          message: "Not logged in",
+          success: false,
+          data: undefined,
+        };
+        return results;
+      }
+      try {
+        const spook = await prisma.spook.findUnique({
+          where: { id: spookId },
+          include: { document: true },
+        });
+        const results: IResult<
+          | (Spook & {
+              document: paragraph[];
+            })
+          | null
+        > = {
+          error: false,
+          message: "Success",
+          success: true,
+          data: spook,
+        };
+        return results;
+      } catch (error) {
+        const results: IResult<undefined> = {
+          error: true,
+          message: (error as { message: string }).message,
+          success: false,
+          data: undefined,
+        };
+        return results;
+      }
+    }),
 });

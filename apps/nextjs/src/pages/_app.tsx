@@ -8,6 +8,7 @@ import { trpc } from "../utils/trpc";
 import { createTheme, NextUIProvider } from "@nextui-org/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Layout } from "../components/Layout";
+import "regenerator-runtime/runtime";
 
 const lightTheme = createTheme({
   type: "light",
